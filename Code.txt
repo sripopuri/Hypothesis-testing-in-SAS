@@ -1,0 +1,128 @@
+LIBNAME hw3 'C:\Users\sxp177631\Desktop\Homeworks\Home work 3\Data';
+data videogames;
+set hw3.videogamesales_main;
+data one;
+set videogames;
+
+/* Genre Dummy variables */
+IF Genre = "Action" THEN Action=1; ELSE Action= 0;
+IF Genre = "Adventure" THEN Adventure=1; ELSE Adventure= 0;
+IF Genre = "Fighting" THEN Fighting=1; ELSE Fighting= 0;
+IF Genre = "Misc" THEN Misc=1; ELSE Misc= 0;
+IF Genre = "Platform" THEN Pf=1; ELSE Pf= 0;
+IF Genre = "Puzzle" THEN Puzzle=1; ELSE Puzzle= 0;
+IF Genre = "Racing" THEN Racing=1; ELSE Racing= 0;
+IF Genre = "Role-Playing" THEN Role=1; ELSE Role= 0;
+IF Genre = "Shooter" THEN Shooter=1; ELSE Shooter= 0;
+IF Genre = "Simulation" THEN Simulation=1; ELSE Simulation= 0;
+IF Genre = "Sports" THEN Sports=1; ELSE Sports= 0;
+IF Genre = "Strategy" THEN Strategy=1; ELSE Strategy= 0;
+
+/* Platforms Dummy variables */
+IF Platform = "DS" THEN DS=1; ELSE DS= 0;
+IF Platform = "GBA" THEN GBA=1; ELSE GBA= 0;
+IF Platform = "GC" THEN GC=1; ELSE GC= 0;
+IF Platform = "PC" THEN PC=1; ELSE PC= 0;
+IF Platform = "PS2" THEN PS2=1; ELSE PS2= 0;
+IF Platform = "PS3" THEN PS3=1; ELSE PS3= 0;
+IF Platform = "PSP" THEN PSP=1; ELSE PSP= 0;
+IF Platform = "Wii" THEN Wii=1; ELSE Wii= 0;
+IF Platform = "X360" THEN X360=1; ELSE X360= 0;
+IF Platform = "XB" THEN XB=1; ELSE XB= 0;
+
+/* Interaction between Critic Score and User Score */
+CU_Score = Critic_Score*User_Score;
+Global_Sales_log = log(Global_Sales);
+run;
+/* Checking if Platform and Genre class variables are significant on Global_Sales */
+proc glm data = one;
+class Platform(ref=FIRST) Genre(ref=FIRST);
+model Global_Sales = Platform Genre Critic_Score Critic_Count User_Score User_Count CU_Score;
+run;
+quit;
+/* Yes Platform and Genre are influencing the Glabal_Sales of videogames */
+
+proc reg data = one plots = none;
+model Global_Sales_log = Critic_Score Critic_Count User_Score User_Count CU_Score Year_of_Release
+					 Action Adventure Fighting Misc Pf Puzzle Racing Role Shooter 
+					 Simulation Sports Strategy DS GBA GC PC PS2 PS3 PSP Wii X360 XB;
+run;
+delete Adventure;
+print;
+run;
+delete Strategy;
+print;
+run;
+delete Puzzle;
+print;
+run;
+delete Shooter;
+print;
+run;
+delete Fighting;
+print;
+run;
+delete Action;
+print;
+run;
+delete CU_Score;
+print;
+run;
+delete X360;
+print;
+run;
+delete GC;
+print;
+run;
+delete PSP;
+print;
+run;
+delete GBA;
+print;
+run;
+delete PS3;
+print;
+run;
+delete DS;
+print;
+run;
+quit;
+proc reg data = one plots =none;
+model Global_Sales_log = Critic_Score Critic_Count User_Score User_Count Year_of_Release
+					 Misc Pf  Racing Role Simulation Sports  PC PS2 Wii XB;
+run;
+/* CooksD - Model modification */
+proc reg data=one plots=none;
+ model Global_Sales_log = Critic_Score Critic_Count User_Score User_Count Year_of_Release
+					 Misc Pf  Racing Role Simulation Sports  PC PS2 Wii XB;
+ output out = regdata cookd = cookd student=sresiduals; 
+run;
+quit;
+
+/* Estimate the model without the influential points */
+ODS RTF FILE= 'Model';
+ODS GRAPHICS ON;
+proc reg data=regdata;
+ model Global_Sales_log = Critic_Score Critic_Count User_Score User_Count Year_of_Release
+					 Misc Pf  Racing Role Simulation Sports  PC PS2 Wii XB;
+ where Cookd < 4 / 4413;
+run;
+quit;
+ODS GRAPHICS OFF;
+ODS RTF CLOSE;
+/* Checking for Multi Collinearity */ 
+ proc reg data = regdata;
+ model Global_Sales_log = Critic_Score Critic_Count User_Score User_Count Year_of_Release
+					 Misc Pf  Racing Role Simulation Sports  PC PS2 Wii XB / collinoint vif; 
+run;
+
+/* Normality of error term */
+proc univariate data=regdata normal;
+ var sresiduals; 
+ histogram sresiduals / normal kernel;
+run;
+proc univariate data=regdata normal;
+ var sresiduals; 
+ histogram sresiduals / normal kernel;
+ where cookd < 4 / 21;
+run;
